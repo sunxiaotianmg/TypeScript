@@ -298,6 +298,7 @@ namespace ts {
      * is assumed to be the same as root directory of the project.
      */
     export function resolveTypeReferenceDirective(typeReferenceDirectiveName: string, containingFile: string | undefined, options: CompilerOptions, host: ModuleResolutionHost, redirectedReference?: ResolvedProjectReference, cache?: TypeReferenceDirectiveResolutionCache, resolutionMode?: SourceFile["impliedNodeFormat"]): ResolvedTypeReferenceDirectiveWithFailedLookupLocations {
+        Debug.assert(typeof typeReferenceDirectiveName === "string", "Non-string value passed to `ts.resolveTypeReferenceDirective`, likely by a wrapping package working with an outdated `resolveTypeReferenceDirectives` signature. This is probably not a problem in TS itself.");
         const traceEnabled = isTraceEnabled(options, host);
         if (redirectedReference) {
             options = redirectedReference.commandLine.options;
@@ -1575,6 +1576,16 @@ namespace ts {
 
     /** Return the file if it exists. */
     function tryFile(fileName: string, onlyRecordFailures: boolean, state: ModuleResolutionState): string | undefined {
+        if (!state.compilerOptions.moduleSuffixes?.length) {
+            return tryFileLookup(fileName, onlyRecordFailures, state);
+        }
+
+        const ext = tryGetExtensionFromPath(fileName) ?? "";
+        const fileNameNoExtension = ext ? removeExtension(fileName, ext) : fileName;
+        return forEach(state.compilerOptions.moduleSuffixes, suffix => tryFileLookup(fileNameNoExtension + suffix + ext, onlyRecordFailures, state));
+    }
+
+    function tryFileLookup(fileName: string, onlyRecordFailures: boolean, state: ModuleResolutionState): string | undefined {
         if (!onlyRecordFailures) {
             if (state.host.fileExists(fileName)) {
                 if (state.traceEnabled) {

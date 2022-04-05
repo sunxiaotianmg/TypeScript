@@ -373,6 +373,8 @@ namespace ts {
                 case SyntaxKind.ConstKeyword:
                 case SyntaxKind.DeclareKeyword:
                 case SyntaxKind.ReadonlyKeyword:
+                case SyntaxKind.InKeyword:
+                case SyntaxKind.OutKeyword:
                 // TypeScript accessibility and readonly modifiers are elided
                 // falls through
                 case SyntaxKind.ArrayType:
@@ -3355,6 +3357,10 @@ namespace ts {
             return substituteConstantValue(node);
         }
 
+        function safeMultiLineComment(value: string): string {
+            return value.replace(/\*\//g, "*_/");
+        }
+
         function substituteConstantValue(node: PropertyAccessExpression | ElementAccessExpression): LeftHandSideExpression {
             const constantValue = tryGetConstEnumValue(node);
             if (constantValue !== undefined) {
@@ -3364,13 +3370,9 @@ namespace ts {
                 const substitute = typeof constantValue === "string" ? factory.createStringLiteral(constantValue) : factory.createNumericLiteral(constantValue);
                 if (!compilerOptions.removeComments) {
                     const originalNode = getOriginalNode(node, isAccessExpression);
-                    const propertyName = isPropertyAccessExpression(originalNode)
-                        ? declarationNameToString(originalNode.name)
-                        : getTextOfNode(originalNode.argumentExpression);
 
-                    addSyntheticTrailingComment(substitute, SyntaxKind.MultiLineCommentTrivia, ` ${propertyName} `);
+                    addSyntheticTrailingComment(substitute, SyntaxKind.MultiLineCommentTrivia, ` ${safeMultiLineComment(getTextOfNode(originalNode))} `);
                 }
-
                 return substitute;
             }
 

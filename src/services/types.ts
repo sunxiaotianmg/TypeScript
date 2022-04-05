@@ -240,7 +240,7 @@ namespace ts {
     //
     // Public interface of the host of a language service instance.
     //
-    export interface LanguageServiceHost extends GetEffectiveTypeRootsHost {
+    export interface LanguageServiceHost extends GetEffectiveTypeRootsHost, MinimalResolutionCacheHost {
         getCompilationSettings(): CompilerOptions;
         getNewLine?(): string;
         getProjectVersion?(): string;
@@ -263,9 +263,14 @@ namespace ts {
          * Without these methods, only completions for ambient modules will be provided.
          */
         readDirectory?(path: string, extensions?: readonly string[], exclude?: readonly string[], include?: readonly string[], depth?: number): string[];
-        readFile?(path: string, encoding?: string): string | undefined;
         realpath?(path: string): string;
-        fileExists?(path: string): boolean;
+
+        /*
+         * Unlike `realpath and `readDirectory`, `readFile` and `fileExists` are now _required_
+         * to properly acquire and setup source files under module: node12+ modes.
+         */
+        readFile(path: string, encoding?: string): string | undefined;
+        fileExists(path: string): boolean;
 
         /*
          * LS host can optionally implement these methods to support automatic updating when new type libraries are installed
@@ -1227,6 +1232,7 @@ namespace ts {
         hasAction?: true;
         source?: string;
         sourceDisplay?: SymbolDisplayPart[];
+        labelDetails?: CompletionEntryLabelDetails;
         isRecommended?: true;
         isFromUncheckedFile?: true;
         isPackageJsonImport?: true;
@@ -1240,6 +1246,11 @@ namespace ts {
          * is an auto-import.
          */
         data?: CompletionEntryData;
+    }
+
+    export interface CompletionEntryLabelDetails {
+        detail?: string;
+        description?: string;
     }
 
     export interface CompletionEntryDetails {
